@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Быстрые заметки — Выбор</title>
+  <link rel="stylesheet" href="selection.css" />
+</head>
+<body>
+  <div class="selection-container">
+    <div class="selection-modal">
+      <div class="modal-header">
+        <h1>📝 Быстрые заметки</h1>
+        <p class="modal-subtitle">Выберите существующую заметку или создайте новую</p>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="notesSelect">Выбрать из существующих:</label>
+          <select id="notesSelect" class="notes-select" disabled>
+            <option value="" disabled selected>Загрузка списка...</option>
+          </select>
+          <span id="noNotesMessage" class="info-message">Нет сохранённых заметок</span>
+        </div>
+
+        <div class="divider">
+          <span>или</span>
+        </div>
+
+        <div class="form-group">
+          <label for="newNoteTitle">Название новой заметки:</label>
+          <div class="input-group">
+            <input 
+              type="text" 
+              id="newNoteTitle" 
+              class="title-input" 
+              placeholder="Введите заголовок..."
+              maxlength="200"
+              autocomplete="off"
+            />
+            <button id="createBtn" class="btn-create" disabled>Создать</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <small>
+          ⚠️ Закрытие вкладки без выбора или создания отменит действие
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <script src="selection.js"></script>
+</body>
+</html>
