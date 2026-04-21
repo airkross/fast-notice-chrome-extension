@@ -1,18 +1,9 @@
-/**
- * selection.js — Логика страницы выбора/создания заметки
- * v2.0.2: Исправлено — нет диалога "Закрыть сайт?" при создании/выборе
- */
-
-// === DOM-ЭЛЕМЕНТЫ ===
 const notesSelect = document.getElementById('notesSelect');
 const noNotesMessage = document.getElementById('noNotesMessage');
 const newNoteTitleInput = document.getElementById('newNoteTitle');
 const createBtn = document.getElementById('createBtn');
 
-// === СОСТОЯНИЕ ===
-let isProcessing = false; // Флаг: идёт ли обработка создания/выбора
-
-// === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+let isProcessing = false;
 
 function sendToBackground(type, payload = {}) {
   return new Promise((resolve, reject) => {
@@ -48,16 +39,12 @@ async function loadNotesList() {
       notesSelect.appendChild(placeholder);
       
       notes.forEach(note => {
-        const displayName = note.title || note.key;
         const option = document.createElement('option');
         option.value = note.id;
-        option.textContent = displayName;
-        option.dataset.key = note.key;
+        option.textContent = note.title || note.key;
         notesSelect.appendChild(option);
       });
     }
-    
-    console.log('[Selection] Загружено заметок:', notes.length);
   } catch (err) {
     console.warn('[Selection] Ошибка загрузки списка:', err);
     notesSelect.innerHTML = '<option value="" disabled>Ошибка загрузки</option>';
@@ -70,10 +57,6 @@ function updateCreateButtonState() {
   createBtn.disabled = !title || isProcessing;
 }
 
-/**
- * Создаёт новую заметку
- * ✅ ИСПРАВЛЕНО: заметка создаётся в background только после navigation
- */
 async function createNewNote() {
   const title = newNoteTitleInput.value.trim();
   if (!title || isProcessing) return;
@@ -85,12 +68,7 @@ async function createNewNote() {
   try {
     const response = await sendToBackground('CREATE_NOTE', { title });
     
-    if (response?.success) {
-      console.log('[Selection] Заметка создана:', response.noteId);
-      // ✅ Не вызываем close — background уже обновил URL вкладки
-      // ✅ Если пользователь отменит navigation — вкладка останется на selection.html
-      // ✅ Заметка не создастся в хранилище (background создаёт после tabs.update)
-    } else {
+    if (!response?.success) {
       alert('Ошибка создания заметки: ' + (response?.error || 'Неизвестная ошибка'));
       isProcessing = false;
       updateCreateButtonState();
@@ -105,10 +83,6 @@ async function createNewNote() {
   }
 }
 
-/**
- * Открывает существующую заметку
- * ✅ ИСПРАВЛЕНО: нет beforeunload который блокирует навигацию
- */
 async function openExistingNote(noteId) {
   if (!noteId || isProcessing) return;
   
@@ -116,8 +90,6 @@ async function openExistingNote(noteId) {
   
   try {
     await sendToBackground('OPEN_NOTE', { noteId });
-    console.log('[Selection] Открыта заметка:', noteId);
-    // ✅ background обновит URL текущей вкладки
   } catch (err) {
     console.warn('[Selection] Ошибка открытия:', err);
     alert('Ошибка при открытии заметки');
@@ -125,30 +97,34 @@ async function openExistingNote(noteId) {
   }
 }
 
-// === ОБРАБОТЧИКИ СОБЫТИЙ ===
+function initSelection() {
+  loadNotesList();
+  newNoteTitleInput.addEventListener('input', updateCreateButtonState);
+  createBtn.addEventListener('click', createNewNote);
+  newNoteTitleInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !createBtn.disabled) {
+      e.preventDefault();
+      createNewNote();
+    }
+  });
+  notesSelect.addEventListener('change', (e) => {
+    const noteId = e.target.value;
+    if (noteId) openExistingNote(noteId);
+  });
+  console.log('[Selection] Инициализировано');
+}
 
-loadNotesList();
+if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+  initSelection();
+}
 
-newNoteTitleInput.addEventListener('input', updateCreateButtonState);
-
-createBtn.addEventListener('click', createNewNote);
-
-newNoteTitleInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !createBtn.disabled) {
-    e.preventDefault();
-    createNewNote();
-  }
-});
-
-notesSelect.addEventListener('change', (e) => {
-  const noteId = e.target.value;
-  if (noteId) {
-    openExistingNote(noteId);
-  }
-});
-
-// ✅ УДАЛЕНО: beforeunload который вызывал диалог "Закрыть сайт?"
-// Теперь вкладка закрывается тихо если пользователь нажал на крестик
-// Это корректное поведение — заметка ещё не создана, ничего не теряется
-
-console.log('[Selection] Инициализировано');
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    sendToBackground,
+    loadNotesList,
+    updateCreateButtonState,
+    createNewNote,
+    openExistingNote,
+    initSelection,
+  };
+}

@@ -1,4 +1,4 @@
-/* editor.css — v2.0.2 Стили для редактора заметок */
+/* editor.css — v3.2.1 Стили для редактора заметок */
 
 :root {
   --bg-primary: #ffffff;
@@ -14,6 +14,8 @@
   --danger-color: #e74c3c;
   --danger-hover: #c0392b;
   --modal-overlay: rgba(0, 0, 0, 0.5);
+  --toolbar-bg: #f5f5f5;
+  --toolbar-border: #d0d0d0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -26,6 +28,8 @@
     --border-color: #444444;
     --accent-color: #6db3f2;
     --accent-hover: #5a9fd4;
+    --toolbar-bg: #2d2d2d;
+    --toolbar-border: #444444;
   }
 }
 
@@ -41,13 +45,14 @@ body {
 }
 
 .editor-container {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
+/* Header */
 .editor-header {
   display: grid;
   grid-template-columns: 1fr auto auto;
@@ -57,7 +62,6 @@ body {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  flex-wrap: wrap;
 }
 
 .header-left { min-width: 200px; }
@@ -71,18 +75,12 @@ body {
   color: var(--text-primary);
   font-size: 1rem;
   font-weight: 500;
-  transition: border-color 0.2s;
 }
 
 .note-title-input:focus {
   outline: none;
   border-color: var(--accent-color);
   box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.2);
-}
-
-.note-title-input::placeholder {
-  color: var(--text-secondary);
-  font-weight: normal;
 }
 
 .header-center { min-width: 180px; max-width: 250px; }
@@ -96,25 +94,12 @@ body {
   color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.notes-select:focus {
-  outline: none;
-  border-color: var(--accent-color);
-}
-
-.notes-select option {
-  padding: 6px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 8px;
-  justify-content: flex-end;
 }
 
 .status-indicator {
@@ -128,52 +113,178 @@ body {
 .status-indicator.saving { color: var(--warning-color); }
 .status-indicator.saved { color: var(--success-color); }
 
-.btn-icon {
-  background: none;
-  border: none;
-  font-size: 1.1rem;
-  cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 6px;
-  transition: background 0.2s, transform 0.1s;
-  line-height: 1;
-  color: var(--text-primary);
-}
-
-.btn-icon:hover { background: var(--border-color); }
-.btn-icon:active { transform: scale(0.95); }
-
-.btn-delete:hover { background: rgba(231, 76, 60, 0.15); }
-.btn-debug:hover { background: rgba(74, 144, 217, 0.15); }
-
-.editor-content {
-  min-height: 60vh;
-  padding: 20px;
+/* TextEditor Container */
+.texteditor-container {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-secondary);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative; /* ✅ Для позиционирования тултипа */
+}
+
+/* Toolbar */
+.texteditor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--toolbar-border);
+  align-items: center;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 0 8px;
+  border-right: 1px solid var(--toolbar-border);
+}
+
+.toolbar-group:last-child {
+  border-right: none;
+}
+
+.toolbar-btn {
+  padding: 6px 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.toolbar-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-color);
+}
+
+.toolbar-btn:active {
+  transform: scale(0.98);
+}
+
+.toolbar-btn.active {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.toolbar-select {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.toolbar-select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+/* Editor Content */
+.texteditor-content {
+  min-height: 400px;
+  max-height: calc(100vh - 350px);
+  padding: 20px;
+  background: var(--bg-primary);
   font-size: 1rem;
   line-height: 1.7;
   outline: none;
+  overflow-y: auto;
   white-space: pre-wrap;
-  transition: border-color 0.2s;
+  position: relative; /* ✅ Для позиционирования тултипа */
 }
 
-.editor-content:focus {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.15);
+.texteditor-content:focus {
+  background: var(--bg-primary);
 }
 
-.editor-content:empty::before {
-  content: attr(placeholder);
+.texteditor-content h1,
+.texteditor-content h2,
+.texteditor-content h3,
+.texteditor-content h4,
+.texteditor-content h5 {
+  margin: 16px 0 8px 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.texteditor-content h1 { font-size: 2rem; }
+.texteditor-content h2 { font-size: 1.75rem; }
+.texteditor-content h3 { font-size: 1.5rem; }
+.texteditor-content h4 { font-size: 1.25rem; }
+.texteditor-content h5 { font-size: 1rem; }
+
+.texteditor-content p {
+  margin: 8px 0;
+}
+
+.texteditor-content ul,
+.texteditor-content ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.texteditor-content li {
+  margin: 4px 0;
+}
+
+.texteditor-content a {
+  color: var(--accent-color);
+  text-decoration: underline;
+  cursor: pointer;
+  position: relative;
+}
+
+.texteditor-content a:hover {
+  text-decoration: none;
+  background: rgba(74, 144, 217, 0.1);
+  border-radius: 2px;
+}
+
+.texteditor-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.texteditor-content blockquote {
+  border-left: 4px solid var(--accent-color);
+  padding-left: 16px;
+  margin: 16px 0;
   color: var(--text-secondary);
-  opacity: 0.7;
 }
 
-.editor-content a { color: var(--accent-color); text-decoration: none; }
-.editor-content a:hover { text-decoration: underline; }
-.editor-content img { max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0; display: block; }
+.texteditor-content code {
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.9em;
+}
 
+.texteditor-content pre {
+  background: var(--bg-tertiary);
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.texteditor-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* Footer */
 .editor-footer {
   text-align: center;
   color: var(--text-secondary);
@@ -182,6 +293,94 @@ body {
   border-top: 1px dashed var(--border-color);
 }
 
+/* === ТУЛТИП ДЛЯ ССЫЛОК === */
+.link-tooltip {
+  position: fixed; /* ✅ Fixed для точного позиционирования */
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10000;
+  max-width: 400px;
+  animation: tooltipFadeIn 0.2s ease;
+}
+
+.link-tooltip.hidden {
+  display: none;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.link-tooltip-url {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: 'Consolas', 'Monaco', monospace;
+  min-width: 200px;
+  outline: none;
+}
+
+.link-tooltip-url:focus {
+  border-color: var(--accent-color);
+  background: var(--bg-primary);
+}
+
+.link-tooltip-copy {
+  padding: 4px 10px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.link-tooltip-copy:hover {
+  background: var(--accent-hover);
+}
+
+.link-tooltip-copy:active {
+  transform: scale(0.98);
+}
+
+.link-tooltip-close {
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.link-tooltip-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--danger-color);
+  border-color: var(--danger-color);
+}
+
+/* Modal */
 .modal {
   position: fixed;
   top: 0; left: 0;
@@ -255,46 +454,60 @@ body {
   background: var(--bg-secondary);
 }
 
-.debug-table td:nth-child(3) {
-  font-family: monospace;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  max-width: 250px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.btn-icon {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+  color: var(--text-primary);
 }
 
-.debug-table td:nth-child(4) {
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
+.btn-icon:hover { background: var(--border-color); }
+.btn-delete:hover { background: rgba(231, 76, 60, 0.15); }
+.btn-debug:hover { background: rgba(74, 144, 217, 0.15); }
 
+/* Адаптивность */
 @media (max-width: 768px) {
   .editor-header {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "title"
-      "select"
-      "actions";
+    gap: 8px;
   }
   
-  .header-left { grid-area: title; }
-  .header-center { grid-area: select; }
-  .header-right { 
-    grid-area: actions; 
-    justify-content: space-between;
+  .header-center { max-width: 100%; }
+  
+  .texteditor-toolbar {
+    gap: 4px;
   }
   
-  .notes-select { max-width: 100%; }
+  .toolbar-group {
+    padding: 0 4px;
+  }
   
-  .debug-table th,
-  .debug-table td {
-    padding: 8px 10px;
+  .toolbar-btn {
+    padding: 4px 6px;
     font-size: 0.8rem;
   }
   
-  .debug-table td:nth-child(3) {
-    max-width: 150px;
+  .texteditor-content {
+    max-height: calc(100vh - 400px);
+  }
+  
+  .link-tooltip {
+    max-width: 90vw;
+    left: 5% !important;
+    right: 5% !important;
+  }
+  
+  .link-tooltip-url {
+    min-width: 120px;
+    font-size: 0.75rem;
+  }
+  
+  .link-tooltip-copy {
+    font-size: 0.75rem;
+    padding: 4px 6px;
   }
 }

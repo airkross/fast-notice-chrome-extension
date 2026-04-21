@@ -1,0 +1,142 @@
+# ===========================================
+# Node.js и npm
+# ===========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.pnpm-store/
+
+# ===========================================
+# Тесты и покрытие
+# ===========================================
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+playwright/.cache/
+
+# ===========================================
+# IDE — VSCode
+# ===========================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+.history/
+*.code-workspace
+
+# ===========================================
+# IDE — PhpStorm / WebStorm / IntelliJ
+# ===========================================
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.cproject
+.buildpath
+.targetpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# ===========================================
+# ОС — macOS
+# ===========================================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# ===========================================
+# ОС — Windows
+# ===========================================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# ===========================================
+# ОС — Linux
+# ===========================================
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# ===========================================
+# Сборка и дистрибутив
+# ===========================================
+dist/
+build/
+out/
+*.crx
+*.zip
+*.tar.gz
+
+# ===========================================
+# Логи
+# ===========================================
+logs/
+*.log
+log/
+
+# ===========================================
+# Временные файлы
+# ===========================================
+tmp/
+temp/
+.tmp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# ===========================================
+# Переменные окружения
+# ===========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ===========================================
+# Chrome Extension специфичное
+# ===========================================
+# Ключи разработчика (никогда не коммитьте!)
+*.pem
+*.key
+secrets.json
+
+# ===========================================
+# Документация (опционально)
+# ===========================================
+# docs/_build/
+# .mdx
+
+# ===========================================
+# Прочее
+# ===========================================
+*.bak
+*.orig
+*.old
+.cache/
+.parcel-cache/

@@ -28,28 +28,89 @@
       
       <div class="header-right">
         <span class="status-indicator" id="saveStatus">Готово</span>
-        <button id="debugBtn" class="btn-icon btn-debug" title="Показать все заметки (отладка)">🔍</button>
-        <button id="deleteNote" class="btn-icon btn-delete" title="Удалить текущую заметку">🗑️</button>
+        <button id="debugBtn" class="btn-icon btn-debug" title="Показать все заметки">🔍</button>
+        <button id="deleteNote" class="btn-icon btn-delete" title="Удалить заметку">🗑️</button>
       </div>
     </header>
 
-    <div 
-      id="editor" 
-      class="editor-content" 
-      contenteditable="true" 
-      placeholder="Начните вводить заметку... (поддерживается вставка изображений и ссылок)"
-      spellcheck="true"
-    ></div>
+    <!-- Rich Text Editor -->
+    <div class="texteditor-container">
+      <!-- Панель инструментов -->
+      <div class="texteditor-toolbar" id="textEditorToolbar">
+        
+        <!-- Группа: заголовки -->
+        <div class="toolbar-group">
+          <select id="headingSelect" class="toolbar-select" title="Заголовок">
+            <option value="p">Текст</option>
+            <option value="h1">Заголовок 1</option>
+            <option value="h2">Заголовок 2</option>
+            <option value="h3">Заголовок 3</option>
+            <option value="h4">Заголовок 4</option>
+            <option value="h5">Заголовок 5</option>
+          </select>
+        </div>
+        
+        <!-- Группа: форматирование текста -->
+        <div class="toolbar-group">
+          <button class="toolbar-btn" data-command="bold" title="Жирный (Ctrl+B)">
+            <strong>B</strong>
+          </button>
+          <button class="toolbar-btn" data-command="italic" title="Курсив (Ctrl+I)">
+            <em>I</em>
+          </button>
+          <button class="toolbar-btn" data-command="strikeThrough" title="Зачеркнутый">
+            <s>S</s>
+          </button>
+        </div>
+        
+        <!-- Группа: списки -->
+        <div class="toolbar-group">
+          <button class="toolbar-btn" data-command="insertUnorderedList" title="Маркированный список">
+            • List
+          </button>
+          <button class="toolbar-btn" data-command="insertOrderedList" title="Нумерованный список">
+            1. List
+          </button>
+        </div>
+        
+        <!-- Группа: ссылки -->
+        <div class="toolbar-group">
+          <button class="toolbar-btn" id="linkBtn" title="Вставить ссылку (Ctrl+K)">
+            🔗 Ссылка
+          </button>
+        </div>
+        
+      </div>
+
+      <!-- Область редактирования -->
+      <div 
+        id="textEditor" 
+        class="texteditor-content" 
+        contenteditable="true" 
+        spellcheck="true"
+      ></div>
+      
+      <!-- ✅ Тултип для ссылок -->
+      <div id="linkTooltip" class="link-tooltip hidden">
+        <input type="text" class="link-tooltip-url" id="linkTooltipUrl" readonly />
+        <button class="link-tooltip-copy" id="linkTooltipCopy" title="Копировать ссылку">
+          📋 Копировать
+        </button>
+        <button class="link-tooltip-close" id="linkTooltipClose" title="Закрыть">
+          ✕
+        </button>
+      </div>
+      
+    </div>
 
     <footer class="editor-footer">
       <small>
-        💡 Автосохранение при переключении вкладки | 
-        ➕ Новая заметка: клик по иконке расширения | 
-        🗑️ Удаление: кнопка корзины
+        💡 Автосохранение | Ctrl+B: жирный | Ctrl+I: курсив | Вставка любого формата поддерживается
       </small>
     </footer>
   </div>
 
+  <!-- Модальное окно отладки -->
   <div id="debugModal" class="modal hidden">
     <div class="modal-content">
       <div class="modal-header">
@@ -57,24 +118,24 @@
         <button id="closeModal" class="btn-icon btn-close" title="Закрыть">✕</button>
       </div>
       <div class="modal-body">
-        <div id="debugTableContainer" class="table-wrapper">
-          <table id="debugTable" class="debug-table">
+        <div class="table-wrapper">
+          <table class="debug-table">
             <thead>
               <tr>
                 <th>Ключ</th>
                 <th>Заголовок</th>
-                <th>Контент (превью)</th>
-                <th>Время изменения</th>
+                <th>Контент</th>
+                <th>Время</th>
               </tr>
             </thead>
-            <tbody id="debugTableBody">
-            </tbody>
+            <tbody id="debugTableBody"></tbody>
           </table>
         </div>
       </div>
     </div>
   </div>
 
+  <script src="texteditor.js"></script>
   <script src="editor.js"></script>
 </body>
 </html>

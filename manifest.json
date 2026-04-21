@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Быстрые заметки",
-  "version": "2.0.2",
-  "description": "Автосохраняемый редактор заметок с заголовками, списком и отладкой",
+  "version": "3.0.0",
+  "description": "Rich Text Editor для заметок с поддержкой Markdown, HTML, JSON",
   "permissions": [
     "storage",
     "tabs"

@@ -1,13 +1,10 @@
 /**
  * background.js — фоновый скрипт расширения (Manifest V3)
- * v2.0.2: Исправлено создание заметки только после подтверждения навигации
+ * v3.1.0: Убран формат из сохранения (теперь только HTML)
  */
 
 const STORAGE_KEY_PREFIX = 'note_';
 
-/**
- * Открывает новую вкладку со страницей выбора заметки
- */
 async function openSelectionTab() {
   try {
     await chrome.tabs.create({
@@ -20,25 +17,18 @@ async function openSelectionTab() {
   }
 }
 
-/**
- * Создаёт новую заметку и открывает редактор в ТОЙ ЖЕ вкладке
- * ВАЖНО: заметка создаётся ТОЛЬКО после успешного обновления вкладки
- */
 async function createNewNote(title, tabId) {
   try {
     const noteId = `note_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-    const key = `${STORAGE_KEY_PREFIX}${noteId}`;
     
-    // ✅ Сначала обновляем вкладку (если пользователь отменит — заметка не создастся)
     if (tabId) {
       await chrome.tabs.update(tabId, {
         url: `${chrome.runtime.getURL('editor.html')}?noteId=${noteId}`
       });
     }
     
-    // ✅ Только после успешного обновления создаём заметку в хранилище
     await chrome.storage.local.set({
-      [key]: {
+      [`${STORAGE_KEY_PREFIX}${noteId}`]: {
         content: '',
         title: title || '',
         timestamp: Date.now(),
@@ -54,9 +44,6 @@ async function createNewNote(title, tabId) {
   }
 }
 
-/**
- * Открывает существующую заметку в редакторе в ТОЙ ЖЕ вкладке
- */
 async function openExistingNote(noteId, tabId) {
   try {
     if (tabId) {
@@ -64,8 +51,7 @@ async function openExistingNote(noteId, tabId) {
         url: `${chrome.runtime.getURL('editor.html')}?noteId=${noteId}`
       });
     }
-    
-    console.log('[Background] Открыта существующая заметка:', noteId);
+    console.log('[Background] Открыта заметка:', noteId);
     return { success: true };
   } catch (err) {
     console.warn('[Background] Ошибка открытия заметки:', err);
@@ -73,9 +59,6 @@ async function openExistingNote(noteId, tabId) {
   }
 }
 
-/**
- * Удаляет заметку по noteId
- */
 async function deleteNoteById(noteId) {
   if (!noteId) return { success: false, error: 'No noteId provided' };
   
@@ -83,7 +66,6 @@ async function deleteNoteById(noteId) {
   try {
     const check = await chrome.storage.local.get([key]);
     if (!check[key]) {
-      console.log(`[Background] Заметка ${key} уже удалена`);
       return { success: true, alreadyDeleted: true };
     }
     
@@ -102,9 +84,6 @@ async function deleteNoteById(noteId) {
   }
 }
 
-/**
- * Возвращает сводку по всем заметкам
- */
 async function getAllNotesSummary() {
   try {
     const all = await chrome.storage.local.get(null);
@@ -139,9 +118,6 @@ async function getAllNotesSummary() {
   }
 }
 
-/**
- * Получает полную заметку по noteId
- */
 async function getNoteById(noteId) {
   if (!noteId) return null;
   const key = `${STORAGE_KEY_PREFIX}${noteId}`;
@@ -154,9 +130,6 @@ async function getNoteById(noteId) {
   }
 }
 
-/**
- * Сохраняет или обновляет заметку
- */
 async function saveNote(noteId, data) {
   if (!noteId) return { success: false, error: 'No noteId' };
   const key = `${STORAGE_KEY_PREFIX}${noteId}`;
@@ -176,9 +149,6 @@ async function saveNote(noteId, data) {
   }
 }
 
-/**
- * Возвращает дамп всех заметок для отладки
- */
 async function getDebugDump() {
   try {
     const all = await chrome.storage.local.get(null);
@@ -195,8 +165,6 @@ async function getDebugDump() {
     return [];
   }
 }
-
-// === ОБРАБОТЧИКИ СОБЫТИЙ ===
 
 chrome.action.onClicked.addListener(() => {
   openSelectionTab();
@@ -237,3 +205,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 chrome.runtime.onInstalled.addListener((details) => {
   console.log(`[Background] v${details.version} — ${details.reason}`);
 });
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    createNewNote,
+    openExistingNote,
+    deleteNoteById,
+    getAllNotesSummary,
+    getNoteById,
+    saveNote,
+    getDebugDump,
+  };
+}
