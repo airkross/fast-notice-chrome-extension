@@ -3,138 +3,123 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Быстрые заметки — Редактор</title>
+  <title>Заметки — Редактор</title>
   <link rel="stylesheet" href="editor.css" />
+  <link rel="stylesheet" href="pell.css" />
 </head>
 <body>
   <div class="editor-container">
-    
-    <header class="editor-header">
-      <div class="header-left">
-        <input 
-          type="text" 
-          id="noteTitle" 
-          class="note-title-input" 
-          placeholder="Заголовок заметки..."
-          maxlength="200"
-        />
-      </div>
-      
-      <div class="header-center">
-        <select id="notesList" class="notes-select">
-          <option value="" disabled selected>📋 Выбрать заметку...</option>
-        </select>
-      </div>
-      
-      <div class="header-right">
-        <span class="status-indicator" id="saveStatus">Готово</span>
-        <button id="debugBtn" class="btn-icon btn-debug" title="Показать все заметки">🔍</button>
-        <button id="deleteNote" class="btn-icon btn-delete" title="Удалить заметку">🗑️</button>
+
+    <!-- Compact Header -->
+    <header class="editor-header compact">
+      <!-- Back button -->
+      <button id="backBtn" class="btn-icon btn-back" title="К списку">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+
+      <!-- Logo -->
+      <a href="#" class="app-logo" onclick="return false;">
+        <div class="app-logo-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <span class="app-logo-text">Заметки</span>
+      </a>
+
+      <!-- Status -->
+      <span class="status-indicator saved" id="saveStatus">Сохранено</span>
+
+      <!-- Actions -->
+      <div class="header-actions">
+        <button id="themeToggleBtn" class="btn-icon btn-theme" title="Тема">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+        <button id="deleteNote" class="btn-icon btn-delete" title="Удалить">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        </button>
       </div>
     </header>
 
-    <!-- Rich Text Editor -->
-    <div class="texteditor-container">
-      <!-- Панель инструментов -->
-      <div class="texteditor-toolbar" id="textEditorToolbar">
-        
-        <!-- Группа: заголовки -->
-        <div class="toolbar-group">
-          <select id="headingSelect" class="toolbar-select" title="Заголовок">
-            <option value="p">Текст</option>
-            <option value="h1">Заголовок 1</option>
-            <option value="h2">Заголовок 2</option>
-            <option value="h3">Заголовок 3</option>
-            <option value="h4">Заголовок 4</option>
-            <option value="h5">Заголовок 5</option>
-          </select>
-        </div>
-        
-        <!-- Группа: форматирование текста -->
-        <div class="toolbar-group">
-          <button class="toolbar-btn" data-command="bold" title="Жирный (Ctrl+B)">
-            <strong>B</strong>
-          </button>
-          <button class="toolbar-btn" data-command="italic" title="Курсив (Ctrl+I)">
-            <em>I</em>
-          </button>
-          <button class="toolbar-btn" data-command="strikeThrough" title="Зачеркнутый">
-            <s>S</s>
-          </button>
-        </div>
-        
-        <!-- Группа: списки -->
-        <div class="toolbar-group">
-          <button class="toolbar-btn" data-command="insertUnorderedList" title="Маркированный список">
-            • List
-          </button>
-          <button class="toolbar-btn" data-command="insertOrderedList" title="Нумерованный список">
-            1. List
-          </button>
-        </div>
-        
-        <!-- Группа: ссылки -->
-        <div class="toolbar-group">
-          <button class="toolbar-btn" id="linkBtn" title="Вставить ссылку (Ctrl+K)">
-            🔗 Ссылка
-          </button>
-        </div>
-        
-      </div>
-
-      <!-- Область редактирования -->
-      <div 
-        id="textEditor" 
-        class="texteditor-content" 
-        contenteditable="true" 
-        spellcheck="true"
-      ></div>
-      
-      <!-- ✅ Тултип для ссылок -->
-      <div id="linkTooltip" class="link-tooltip hidden">
-        <input type="text" class="link-tooltip-url" id="linkTooltipUrl" readonly />
-        <button class="link-tooltip-copy" id="linkTooltipCopy" title="Копировать ссылку">
-          📋 Копировать
-        </button>
-        <button class="link-tooltip-close" id="linkTooltipClose" title="Закрыть">
-          ✕
-        </button>
-      </div>
-      
+    <!-- Title Input Card -->
+    <div class="ozon-card title-card">
+      <input
+        type="text"
+        id="noteTitle"
+        class="note-title-input-lg"
+        placeholder="Введите заголовок заметки..."
+        maxlength="200"
+      />
+      <select id="notesList" class="notes-select-lg" title="Выбрать другую заметку">
+        <option value="" disabled selected>📋 Выбрать заметку...</option>
+      </select>
     </div>
 
+    <!-- Editor Card -->
+    <div class="ozon-card editor-card">
+      <!-- Toolbar -->
+      <div class="editor-toolbar">
+        <select id="headingSelect" class="toolbar-select" title="Форматирование">
+          <option value="p">¶ Обычный текст</option>
+          <option value="h1">H1 Заголовок</option>
+          <option value="h2">H2 Заголовок</option>
+          <option value="h3">H3 Заголовок</option>
+          <option value="h4">H4 Заголовок</option>
+          <option value="h5">H5 Заголовок</option>
+        </select>
+
+        <div class="toolbar-divider"></div>
+
+        <button class="pell-button" data-pell-action="bold" data-command="bold" title="Жирный (Ctrl+B)"><b>B</b></button>
+        <button class="pell-button" data-pell-action="italic" data-command="italic" title="Курсив (Ctrl+I)"><i>I</i></button>
+        <button class="pell-button" data-pell-action="strikeThrough" data-command="strikeThrough" title="Зачёркнутый"><s>S</s></button>
+
+        <div class="toolbar-divider"></div>
+
+        <button class="pell-button" data-pell-action="ulist" data-command="insertUnorderedList" title="Маркированный">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>
+        </button>
+        <button class="pell-button" data-pell-action="olist" data-command="insertOrderedList" title="Нумерованный">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><text x="2" y="8" font-size="8" fill="currentColor">1</text><text x="2" y="14" font-size="8" fill="currentColor">2</text><text x="2" y="20" font-size="8" fill="currentColor">3</text></svg>
+        </button>
+
+        <div class="toolbar-divider"></div>
+
+        <button id="linkBtn" class="pell-button" data-command="link" title="Ссылка (Ctrl+K)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        </button>
+      </div>
+
+      <!-- Editor Area -->
+      <div id="pellEditor" class="pell-wrapper">
+        <div id="textEditor" class="pell-content" contenteditable="true"></div>
+      </div>
+    </div>
+
+    <!-- Footer Hint -->
     <footer class="editor-footer">
-      <small>
-        💡 Автосохранение | Ctrl+B: жирный | Ctrl+I: курсив | Вставка любого формата поддерживается
-      </small>
+      <span class="hint-item"><kbd>Ctrl</kbd>+<kbd>B</kbd> жирный</span>
+      <span class="hint-divider">•</span>
+      <span class="hint-item"><kbd>Ctrl</kbd>+<kbd>I</kbd> курсив</span>
+      <span class="hint-divider">•</span>
+      <span class="hint-item"><kbd>Ctrl</kbd>+<kbd>K</kbd> ссылка</span>
     </footer>
+
   </div>
 
-  <!-- Модальное окно отладки -->
-  <div id="debugModal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>📊 Все заметки в хранилище</h3>
-        <button id="closeModal" class="btn-icon btn-close" title="Закрыть">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="table-wrapper">
-          <table class="debug-table">
-            <thead>
-              <tr>
-                <th>Ключ</th>
-                <th>Заголовок</th>
-                <th>Контент</th>
-                <th>Время</th>
-              </tr>
-            </thead>
-            <tbody id="debugTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+  <!-- Link Tooltip -->
+  <div id="linkTooltip" class="link-tooltip hidden">
+    <input type="text" id="linkTooltipUrl" class="link-tooltip-url" placeholder="https://example.com" />
+    <button id="linkTooltipCopy" class="link-tooltip-btn" title="Копировать">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+    </button>
+    <button id="linkTooltipSave" class="link-tooltip-btn" title="Сохранить">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+    </button>
+    <button id="linkTooltipDelete" class="link-tooltip-btn link-tooltip-delete" title="Удалить">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+    </button>
   </div>
 
+  <script src="pell.js"></script>
   <script src="texteditor.js"></script>
   <script src="editor.js"></script>
 </body>

@@ -1,0 +1,29 @@
+/* pell.css — Минимальные стили для Pell Editor (стили Ozon в editor.css) */
+
+.pell {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.pell-content {
+  box-sizing: border-box;
+  outline: 0;
+  overflow-y: auto;
+}
+
+.pell-actionbar {
+  background-color: transparent;
+  border-bottom: none;
+}
+
+.pell-button {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  outline: 0;
+}
+
+.pell-button-selected {
+  background-color: #F0F0F0;
+}

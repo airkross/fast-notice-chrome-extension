@@ -153,11 +153,12 @@ async function getDebugDump() {
   try {
     const all = await chrome.storage.local.get(null);
     return Object.entries(all)
-      .filter(([k]) => k.startsWith(STORAGE_KEY_PREFIX))
+      .filter(([k, v]) => k.startsWith(STORAGE_KEY_PREFIX) && v)
       .map(([k, v]) => ({
         key: k,
+        id: k.replace(STORAGE_KEY_PREFIX, ''),
         title: v.title || '(без заголовка)',
-        content: v.content?.slice(0, 50) + '...',
+        content: (v.content || '').slice(0, 50) + ((v.content || '').length > 50 ? '...' : ''),
         timestamp: new Date(v.timestamp || 0).toLocaleString('ru-RU')
       }));
   } catch (err) {

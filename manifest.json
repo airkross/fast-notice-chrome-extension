@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Быстрые заметки",
-  "version": "3.0.0",
-  "description": "Rich Text Editor для заметок с поддержкой Markdown, HTML, JSON",
+  "version": "3.2.1",
+  "description": "Rich Text Editor для заметок с поддержкой Pell",
   "permissions": [
     "storage",
     "tabs"
@@ -12,5 +12,11 @@
   },
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["pell.js", "pell.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
