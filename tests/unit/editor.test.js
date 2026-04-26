@@ -269,3 +269,208 @@ describe('Editor — Селект выбора заметки', () => {
     expect(notesSelect.options.length).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe('Editor — formatTabsAsHtml', () => {
+  
+  test('форматирует массив вкладок в HTML', () => {
+    const { formatTabsAsHtml } = require('../../editor.js');
+    
+    const tabs = [
+      { url: 'https://google.com', title: 'Google', favIconUrl: '' },
+      { url: 'https://github.com', title: 'GitHub', favIconUrl: '' },
+    ];
+    
+    const result = formatTabsAsHtml(tabs);
+    
+    expect(result).toContain('<h2>🔗 Вкладки</h2>');
+    expect(result).toContain('<ul>');
+    expect(result).toContain('<li>');
+    expect(result).toContain('<a href="https://google.com"');
+    expect(result).toContain('>Google</a>');
+    expect(result).toContain('<a href="https://github.com"');
+    expect(result).toContain('>GitHub</a>');
+  });
+
+  test('возвращает пустую строку для пустого массива', () => {
+    const { formatTabsAsHtml } = require('../../editor.js');
+    
+    const result = formatTabsAsHtml([]);
+    expect(result).toBe('');
+  });
+
+  test('возвращает пустую строку для null/undefined', () => {
+    const { formatTabsAsHtml } = require('../../editor.js');
+    
+    expect(formatTabsAsHtml(null)).toBe('');
+    expect(formatTabsAsHtml(undefined)).toBe('');
+  });
+
+  test('использует "Без названия" для вкладок без title', () => {
+    const { formatTabsAsHtml } = require('../../editor.js');
+    
+    const tabs = [
+      { url: 'https://test.com', title: '', favIconUrl: '' },
+    ];
+    
+    const result = formatTabsAsHtml(tabs);
+    
+    expect(result).toContain('>Без названия</a>');
+  });
+
+  test('экранирует HTML в title', () => {
+    const { formatTabsAsHtml } = require('../../editor.js');
+    
+    const tabs = [
+      { url: 'https://test.com', title: '<script>alert("xss")</script>', favIconUrl: '' },
+    ];
+    
+    const result = formatTabsAsHtml(tabs);
+    
+    // Проверяем что теги экранированы: < = <, > = >, " = "
+    expect(result).toContain('&lt;script&gt;');
+    expect(result).toContain('&quot;xss&quot;');
+    expect(result).not.toContain('<script>alert'); // Неэкранированный тег не должен присутствовать
+  });
+
+  test('экранирует HTML в url', () => {
+    const { formatTabsAsHtml } = require('../../editor.js');
+    
+    const tabs = [
+      { url: 'https://test.com?param=<value>', title: 'Test', favIconUrl: '' },
+    ];
+    
+    const result = formatTabsAsHtml(tabs);
+    
+    // Проверяем что теги экранированы в URL: < = <, > = >
+    expect(result).toContain('&lt;value&gt;');
+    expect(result).not.toContain('<value>');
+  });
+
+  test('добавляет target="_blank" для ссылок', () => {
+    const { formatTabsAsHtml } = require('../../editor.js');
+    
+    const tabs = [
+      { url: 'https://test.com', title: 'Test', favIconUrl: '' },
+    ];
+    
+    const result = formatTabsAsHtml(tabs);
+    
+    expect(result).toContain('target="_blank"');
+    expect(result).toContain('rel="noopener noreferrer"');
+  });
+
+  test('добавляет эмодзи 🔗 к каждой ссылке', () => {
+    const { formatTabsAsHtml } = require('../../editor.js');
+    
+    const tabs = [
+      { url: 'https://test.com', title: 'Test', favIconUrl: '' },
+    ];
+    
+    const result = formatTabsAsHtml(tabs);
+    
+    expect(result).toContain('🔗</li>');
+  });
+});
+
+// ============================================
+// ТЕСТЫ: Сбор вкладок из группы
+// ============================================
+
+describe('Editor — Сбор вкладок из группы', () => {
+  
+  beforeEach(() => {
+    // Дополнительные элементы для тестов
+    document.body.innerHTML += `<button id="collectTabsBtn" title="Собрать вкладки">📋</button>`;
+  });
+
+  test('sendToBackground отправляет GET_TAB_GROUP_INFO', async () => {
+    const mockGroupInfo = {
+      success: true,
+      inGroup: false,
+      hasOtherTabs: true,
+      totalTabs: 5
+    };
+    
+    chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+      if (message.type === 'GET_TAB_GROUP_INFO') {
+        callback(mockGroupInfo);
+      } else {
+        callback({ success: true });
+      }
+    });
+    
+    const { sendToBackground } = require('../../editor.js');
+    
+    const result = await sendToBackground('GET_TAB_GROUP_INFO');
+    
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+      { type: 'GET_TAB_GROUP_INFO' },
+      expect.any(Function)
+    );
+    expect(result.inGroup).toBe(false);
+  });
+
+  test('sendToBackground отправляет COLLECT_TABS_FROM_GROUP', async () => {
+    const mockTabs = {
+      success: true,
+      tabs: [
+        { url: 'https://example.com', title: 'Example', favIconUrl: '' }
+      ],
+      fromGroup: true
+    };
+    
+    chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+      if (message.type === 'COLLECT_TABS_FROM_GROUP') {
+        callback(mockTabs);
+      } else {
+        callback({ success: true });
+      }
+    });
+    
+    const { sendToBackground } = require('../../editor.js');
+    
+    const result = await sendToBackground('COLLECT_TABS_FROM_GROUP');
+    
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+      { type: 'COLLECT_TABS_FROM_GROUP' },
+      expect.any(Function)
+    );
+    expect(result.fromGroup).toBe(true);
+    expect(result.tabs).toHaveLength(1);
+  });
+
+  test('sendToBackground обрабатывает ошибку при недоступности background', async () => {
+    // Мок, который возвращает пустой объект (как при ошибке message port closed)
+    chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+      callback({});
+    });
+    
+    const { sendToBackground } = require('../../editor.js');
+    
+    const result = await sendToBackground('GET_TAB_GROUP_INFO');
+    
+    // Должен вернуть пустой объект при ошибке
+    expect(Object.keys(result)).toHaveLength(0);
+  });
+});
+
+describe('Editor — formatTabsAsHtml с флагом fromGroup', () => {
+  
+  test('форматирует вкладки с флагом fromGroup', () => {
+    const { formatTabsAsHtml } = require('../../editor.js');
+    
+    const tabs = [
+      { url: 'https://group-site1.com', title: 'Group Site 1', favIconUrl: '' },
+      { url: 'https://group-site2.com', title: 'Group Site 2', favIconUrl: '' },
+    ];
+    
+    const result = formatTabsAsHtml(tabs);
+    
+    // Проверяем базовую структуру
+    expect(result).toContain('<h2>🔗 Вкладки</h2>');
+    expect(result).toContain('<ul>');
+    expect(result).toContain('<li>');
+    expect(result).toContain('group-site1.com');
+    expect(result).toContain('group-site2.com');
+  });
+});

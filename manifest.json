@@ -5,7 +5,10 @@
   "description": "Rich Text Editor для заметок с поддержкой Pell",
   "permissions": [
     "storage",
-    "tabs"
+    "tabs",
+    "scripting",
+    "activeTab",
+    "tabGroups"
   ],
   "action": {
     "default_title": "Создать или выбрать заметку"

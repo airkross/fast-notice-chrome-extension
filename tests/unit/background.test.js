@@ -17,6 +17,8 @@ const createChromeMock = () => ({
     update: jest.fn(() => Promise.resolve()),
     remove: jest.fn(() => Promise.resolve()),
     create: jest.fn(() => Promise.resolve({ id: 123 })),
+    query: jest.fn(() => Promise.resolve([])),
+    getCurrent: jest.fn(() => Promise.resolve({ id: 1 })),
   },
   action: {
     onClicked: { addListener: jest.fn() },
@@ -281,8 +283,21 @@ describe('Background — Функции CRUD', () => {
 
   describe('saveNote', () => {
     test('сохраняет новую заметку', async () => {
-      chrome.storage.local.get.mockResolvedValue({});
-      chrome.storage.local.set.mockResolvedValue();
+      // Мок для storage: хранит данные между вызовами get/set
+      const storage = {};
+      chrome.storage.local.get.mockImplementation((keys) => {
+        if (keys === null) return Promise.resolve(storage);
+        if (Array.isArray(keys)) {
+          const result = {};
+          keys.forEach(k => { result[k] = storage[k]; });
+          return Promise.resolve(result);
+        }
+        return Promise.resolve({ [keys]: storage[keys] });
+      });
+      chrome.storage.local.set.mockImplementation((items) => {
+        Object.assign(storage, items);
+        return Promise.resolve();
+      });
       
       const result = await background.saveNote('new_note', { title: 'New', content: '<p>Test</p>' });
       
@@ -436,5 +451,318 @@ describe('Background — chrome.runtime.onInstalled', () => {
     
     const handler = chrome.runtime.onInstalled.addListener.mock.calls[0][0];
     handler({ version: '1.0.0', reason: 'install' });
+  });
+});
+
+describe('Background — COLLECT_TABS', () => {
+  test('собирает вкладки текущего окна', async () => {
+    // Настраиваем мок для вкладок
+    chrome.tabs.getCurrent.mockResolvedValue({ id: 1 });
+    chrome.tabs.query.mockResolvedValue([
+      { id: 1, url: 'chrome-extension://test/editor.html', title: 'Editor', favIconUrl: '' },
+      { id: 2, url: 'https://google.com', title: 'Google', favIconUrl: 'https://google.com/favicon.ico' },
+      { id: 3, url: 'https://github.com', title: 'GitHub', favIconUrl: 'https://github.com/favicon.ico' },
+    ]);
+    
+    // Получаем обработчик сообщений
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'COLLECT_TABS' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    expect(response).toHaveBeenCalledWith({
+      success: true,
+      tabs: expect.arrayContaining([
+        expect.objectContaining({ url: 'https://google.com', title: 'Google' }),
+        expect.objectContaining({ url: 'https://github.com', title: 'GitHub' }),
+      ])
+    });
+  });
+
+  test('исключает текущую вкладку из списка', async () => {
+    chrome.tabs.getCurrent.mockResolvedValue({ id: 1 });
+    chrome.tabs.query.mockResolvedValue([
+      { id: 1, url: 'chrome-extension://test/editor.html', title: 'Editor', favIconUrl: '' },
+      { id: 2, url: 'https://example.com', title: 'Example', favIconUrl: '' },
+    ]);
+    
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'COLLECT_TABS' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = response.mock.calls[0][0];
+    expect(result.tabs).toHaveLength(1);
+    expect(result.tabs[0].title).toBe('Example');
+  });
+
+  test('возвращает пустой массив если нет других вкладок', async () => {
+    chrome.tabs.getCurrent.mockResolvedValue({ id: 1 });
+    chrome.tabs.query.mockResolvedValue([
+      { id: 1, url: 'chrome-extension://test/editor.html', title: 'Editor', favIconUrl: '' },
+    ]);
+    
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'COLLECT_TABS' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = response.mock.calls[0][0];
+    expect(result.success).toBe(true);
+    expect(result.tabs).toHaveLength(0);
+  });
+
+  test('использует "Без названия" для вкладок без title', async () => {
+    chrome.tabs.getCurrent.mockResolvedValue({ id: 1 });
+    chrome.tabs.query.mockResolvedValue([
+      { id: 1, url: 'chrome-extension://test/editor.html', title: 'Editor', favIconUrl: '' },
+      { id: 2, url: 'https://test.com', title: '', favIconUrl: '' },
+    ]);
+    
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'COLLECT_TABS' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = response.mock.calls[0][0];
+    expect(result.tabs[0].title).toBe('Без названия');
+  });
+});
+
+// ============================================
+// ТЕСТЫ: GET_TAB_GROUP_INFO
+// ============================================
+
+describe('Background — GET_TAB_GROUP_INFO', () => {
+  test('возвращает inGroup: false когда редактор не в группе', async () => {
+    chrome.tabs.query.mockResolvedValue([
+      { id: 1, url: 'chrome-extension://test/editor.html', title: 'Editor', groupId: -1 },
+      { id: 2, url: 'https://google.com', title: 'Google', groupId: -1 },
+    ]);
+    
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'GET_TAB_GROUP_INFO' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = response.mock.calls[0][0];
+    expect(result.success).toBe(true);
+    expect(result.inGroup).toBe(false);
+    expect(result.hasOtherTabs).toBe(true);
+    expect(result.totalTabs).toBe(2);
+  });
+
+  test('возвращает inGroup: true когда редактор в группе', async () => {
+    // Мок chrome.tabGroups
+    global.chrome = {
+      ...global.chrome,
+      tabGroups: {
+        get: jest.fn().mockResolvedValue({ id: 42, title: 'Моя группа' }),
+      },
+    };
+    
+    // Перезагружаем модуль с новым моком
+    jest.resetModules();
+    require('../../background.js');
+    
+    chrome.tabs.query.mockResolvedValue([
+      { id: 1, url: 'chrome-extension://test/editor.html', title: 'Editor', groupId: 42 },
+      { id: 2, url: 'https://google.com', title: 'Google', groupId: 42 },
+      { id: 3, url: 'https://github.com', title: 'GitHub', groupId: 42 },
+    ]);
+    
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'GET_TAB_GROUP_INFO' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = response.mock.calls[0][0];
+    expect(result.success).toBe(true);
+    expect(result.inGroup).toBe(true);
+    expect(result.groupId).toBe(42);
+    expect(result.groupTitle).toBe('Моя группа');
+    expect(result.groupTabsCount).toBe(3);
+    expect(result.otherGroupTabsCount).toBe(2);
+  });
+
+  test('возвращает hasOtherTabs: false когда нет других вкладок', async () => {
+    chrome.tabs.query.mockResolvedValue([
+      { id: 1, url: 'chrome-extension://test/editor.html', title: 'Editor', groupId: -1 },
+    ]);
+    
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'GET_TAB_GROUP_INFO' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = response.mock.calls[0][0];
+    expect(result.success).toBe(true);
+    expect(result.hasOtherTabs).toBe(false);
+    expect(result.totalTabs).toBe(1);
+  });
+
+  test('возвращает ошибку при исключении chrome.tabs.query', async () => {
+    chrome.tabs.query.mockRejectedValue(new Error('Tabs query failed'));
+    
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'GET_TAB_GROUP_INFO' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = response.mock.calls[0][0];
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Tabs query failed');
+  });
+});
+
+// ============================================
+// ТЕСТЫ: COLLECT_TABS_FROM_GROUP
+// ============================================
+
+describe('Background — COLLECT_TABS_FROM_GROUP', () => {
+  test('собирает вкладки из группы редактора', async () => {
+    // Мок chrome.tabGroups
+    global.chrome = {
+      ...global.chrome,
+      tabGroups: {
+        get: jest.fn().mockResolvedValue({ id: 42, title: 'Группа проектов' }),
+      },
+    };
+    
+    jest.resetModules();
+    require('../../background.js');
+    
+    chrome.tabs.query.mockResolvedValue([
+      { id: 1, url: 'chrome-extension://test/editor.html', title: 'Editor', groupId: 42 },
+      { id: 2, url: 'https://google.com', title: 'Google', groupId: 42 },
+      { id: 3, url: 'https://github.com', title: 'GitHub', groupId: 42 },
+    ]);
+    
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'COLLECT_TABS_FROM_GROUP' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = response.mock.calls[0][0];
+    expect(result.success).toBe(true);
+    expect(result.fromGroup).toBe(true);
+    expect(result.tabs).toHaveLength(2);
+    expect(result.tabs).toContainEqual(
+      expect.objectContaining({ url: 'https://google.com', title: 'Google' })
+    );
+    expect(result.tabs).toContainEqual(
+      expect.objectContaining({ url: 'https://github.com', title: 'GitHub' })
+    );
+  });
+
+  test('fallback на все вкладки когда редактор не в группе', async () => {
+    chrome.tabs.query.mockResolvedValue([
+      { id: 1, url: 'chrome-extension://test/editor.html', title: 'Editor', groupId: -1 },
+      { id: 2, url: 'https://google.com', title: 'Google', groupId: -1 },
+    ]);
+    
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'COLLECT_TABS_FROM_GROUP' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = response.mock.calls[0][0];
+    expect(result.success).toBe(true);
+    expect(result.fromGroup).toBe(false);
+    expect(result.tabs).toHaveLength(1);
+    expect(result.tabs[0].title).toBe('Google');
+  });
+
+  test('исключает вкладку редактора из результата', async () => {
+    global.chrome = {
+      ...global.chrome,
+      tabGroups: {
+        get: jest.fn().mockResolvedValue({ id: 42, title: 'Test Group' }),
+      },
+    };
+    
+    jest.resetModules();
+    require('../../background.js');
+    
+    chrome.tabs.query.mockResolvedValue([
+      { id: 1, url: 'chrome-extension://test/editor.html', title: 'Editor', groupId: 42 },
+      { id: 2, url: 'https://example.com', title: 'Example', groupId: 42 },
+    ]);
+    
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'COLLECT_TABS_FROM_GROUP' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = response.mock.calls[0][0];
+    // Не должно содержать URL редактора
+    expect(result.tabs.some(t => t.url.includes('editor.html'))).toBe(false);
+    expect(result.tabs).toHaveLength(1);
+    expect(result.tabs[0].url).toBe('https://example.com');
+  });
+
+  test('возвращает пустой массив когда нет других вкладок в группе', async () => {
+    global.chrome = {
+      ...global.chrome,
+      tabGroups: {
+        get: jest.fn().mockResolvedValue({ id: 42, title: 'Solo Group' }),
+      },
+    };
+    
+    jest.resetModules();
+    require('../../background.js');
+    
+    chrome.tabs.query.mockResolvedValue([
+      { id: 1, url: 'chrome-extension://test/editor.html', title: 'Editor', groupId: 42 },
+    ]);
+    
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'COLLECT_TABS_FROM_GROUP' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = response.mock.calls[0][0];
+    expect(result.success).toBe(true);
+    expect(result.tabs).toHaveLength(0);
+    expect(result.fromGroup).toBe(true);
+  });
+
+  test('возвращает ошибку при исключении', async () => {
+    chrome.tabs.query.mockRejectedValue(new Error('Query failed'));
+    
+    const handler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = jest.fn();
+    
+    handler({ type: 'COLLECT_TABS_FROM_GROUP' }, { tab: { id: 1 } }, response);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = response.mock.calls[0][0];
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Query failed');
   });
 });

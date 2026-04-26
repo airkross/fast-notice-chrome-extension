@@ -135,6 +135,9 @@ async function saveNote(noteId, data) {
   const key = `${STORAGE_KEY_PREFIX}${noteId}`;
   try {
     const existing = await chrome.storage.local.get([key]);
+    const contentSize = data.content ? data.content.length : 0;
+    console.log(`[Background] Сохранение заметки ${noteId}, размер контента: ${contentSize} символов`);
+    
     await chrome.storage.local.set({
       [key]: {
         ...(existing[key] || {}),
@@ -142,9 +145,18 @@ async function saveNote(noteId, data) {
         timestamp: Date.now()
       }
     });
+    
+    // Проверяем что данные сохранились
+    const verify = await chrome.storage.local.get([key]);
+    if (!verify[key]) {
+      throw new Error('Сохранение не подтверждено');
+    }
+    
+    console.log(`[Background] Заметка ${noteId} сохранена успешно`);
     return { success: true };
   } catch (err) {
-    console.warn(`[Background] Ошибка сохранения ${key}:`, err);
+    console.error(`[Background] Ошибка сохранения ${key}:`, err);
+    console.error(`[Background] Размер данных:`, JSON.stringify(data).length);
     return { success: false, error: err.message };
   }
 }
@@ -189,17 +201,163 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
       return { success: false, error: 'No tab id' };
     },
-    'OPEN_SELECTION': () => openSelectionTab()
+    'OPEN_SELECTION': () => openSelectionTab(),
+    'GET_TAB_GROUP_INFO': async () => {
+      try {
+        console.log('[Background] Получаем информацию о группах вкладок...');
+        
+        // Получаем все вкладки текущего окна
+        const tabs = await chrome.tabs.query({ currentWindow: true });
+        
+        // Находим вкладку редактора
+        const editorTab = tabs.find(t => t.url && t.url.includes('editor.html'));
+        
+        if (!editorTab) {
+          return { 
+            success: true, 
+            inGroup: false, 
+            hasOtherTabs: tabs.length > 0,
+            totalTabs: tabs.length
+          };
+        }
+        
+        // Проверяем, находится ли редактор в группе
+        if (editorTab.groupId && editorTab.groupId !== -1) {
+          // Получаем информацию о группе
+          try {
+            const group = await chrome.tabGroups.get(editorTab.groupId);
+            console.log('[Background] Редактор в группе:', group.title, group.id);
+            
+            // Получаем все вкладки в этой группе
+            const groupTabs = await chrome.tabs.query({ groupId: editorTab.groupId });
+            const otherGroupTabs = groupTabs.filter(t => t.id !== editorTab.id);
+            
+            return {
+              success: true,
+              inGroup: true,
+              groupId: group.id,
+              groupTitle: group.title,
+              groupTabsCount: groupTabs.length,
+              otherGroupTabsCount: otherGroupTabs.length,
+              hasOtherTabs: tabs.length > 1,
+              totalTabs: tabs.length
+            };
+          } catch (groupErr) {
+            console.warn('[Background] Ошибка получения группы:', groupErr);
+            return {
+              success: true,
+              inGroup: false,
+              hasOtherTabs: tabs.length > 1,
+              totalTabs: tabs.length
+            };
+          }
+        }
+        
+        return { 
+          success: true, 
+          inGroup: false, 
+          hasOtherTabs: tabs.length > 1,
+          totalTabs: tabs.length
+        };
+      } catch (err) {
+        console.error('[Background] Ошибка получения информации о группах:', err);
+        return { success: false, error: err.message };
+      }
+    },
+    
+    'COLLECT_TABS': async () => {
+      try {
+        console.log('[Background] Начинаем сбор вкладок...');
+        
+        // Получаем все вкладки текущего окна
+        const tabs = await chrome.tabs.query({ currentWindow: true });
+        console.log('[Background] Всего вкладок в окне:', tabs.length);
+        
+        // Фильтруем: исключаем вкладку редактора по URL
+        // Редактор имеет URL содержащий 'editor.html'
+        const otherTabs = tabs.filter(t => 
+          t.url && !t.url.includes('editor.html')
+        );
+        console.log('[Background] Других вкладок (без редактора):', otherTabs.length);
+        
+        // Собираем данные: url, title, favIconUrl
+        const tabData = otherTabs.map(tab => ({
+          url: tab.url,
+          title: tab.title || 'Без названия',
+          favIconUrl: tab.favIconUrl || ''
+        }));
+        
+        console.log(`[Background] Собрано ${tabData.length} вкладок`, tabData);
+        return { success: true, tabs: tabData };
+      } catch (err) {
+        console.error('[Background] Ошибка сбора вкладок:', err);
+        console.error('[Background] Тип ошибки:', err.constructor?.name);
+        console.error('[Background] Стек:', err.stack);
+        return { success: false, error: err.message || String(err), tabs: [] };
+      }
+    },
+    
+    'COLLECT_TABS_FROM_GROUP': async () => {
+      try {
+        console.log('[Background] Сбор вкладок из группы...');
+        
+        // Получаем все вкладки текущего окна
+        const allTabs = await chrome.tabs.query({ currentWindow: true });
+        
+        // Находим вкладку редактора
+        const editorTab = allTabs.find(t => t.url && t.url.includes('editor.html'));
+        
+        if (!editorTab || !editorTab.groupId || editorTab.groupId === -1) {
+          console.log('[Background] Редактор не в группе, собираем все вкладки');
+          const otherTabs = allTabs.filter(t => t.url && !t.url.includes('editor.html'));
+          const tabData = otherTabs.map(tab => ({
+            url: tab.url,
+            title: tab.title || 'Без названия',
+            favIconUrl: tab.favIconUrl || ''
+          }));
+          return { success: true, tabs: tabData, fromGroup: false };
+        }
+        
+        // Получаем все вкладки в группе редактора
+        const groupTabs = await chrome.tabs.query({ groupId: editorTab.groupId });
+        console.log('[Background] Вкладок в группе:', groupTabs.length);
+        
+        // Исключаем вкладку редактора
+        const otherGroupTabs = groupTabs.filter(t => t.id !== editorTab.id);
+        
+        const tabData = otherGroupTabs.map(tab => ({
+          url: tab.url,
+          title: tab.title || 'Без названия',
+          favIconUrl: tab.favIconUrl || ''
+        }));
+        
+        console.log(`[Background] Собрано из группы ${tabData.length} вкладок`, tabData);
+        return { success: true, tabs: tabData, fromGroup: true };
+      } catch (err) {
+        console.error('[Background] Ошибка сбора вкладок из группы:', err);
+        return { success: false, error: err.message || String(err), tabs: [] };
+      }
+    }
   };
   
   if (handlers[request.type]) {
-    handlers[request.type]()
-      .then(sendResponse)
-      .catch(err => {
-        console.warn(`[Background] Ошибка ${request.type}:`, err);
-        sendResponse({ success: false, error: err.message });
-      });
-    return true;
+    const handler = handlers[request.type];
+    const result = handler();
+    
+    // Если результат - Promise (для async функций), ждём его
+    if (result && typeof result.then === 'function') {
+      result
+        .then(data => sendResponse(data))
+        .catch(err => {
+          console.warn(`[Background] Ошибка ${request.type}:`, err);
+          sendResponse({ success: false, error: err.message || String(err) });
+        });
+      return true; // Важно: возвращаем true для асинхронного ответа
+    } else {
+      // Синхронный обработчик
+      sendResponse(result);
+      return false;
+    }
   }
 });
 
